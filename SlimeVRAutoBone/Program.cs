@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace slimevr_auto_bone
+namespace SlimeVRAutoBone
 {
     class Program
     {
