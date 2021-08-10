@@ -11,21 +11,21 @@ namespace SlimeVRAutoBone
             var footPos = Vector3.Randomized;
 
             var lengths = new double[] {
-                random.NextDouble(),
-                random.NextDouble(),
-                random.NextDouble(),
-                random.NextDouble(), 
-                random.NextDouble()
+                random.NextDoubleInclusive(0.5, 2),
+                random.NextDoubleInclusive(0.5, 2),
+                random.NextDoubleInclusive(0.5, 2),
+                random.NextDoubleInclusive(0.5, 2), 
+                random.NextDoubleInclusive(0.5, 2)
             };
 
             Console.WriteLine($"Lengths: {string.Join(", ", lengths)}");
 
             var fakeLengths = new double[] {
-                random.NextDouble(),
-                random.NextDouble(),
-                random.NextDouble(),
-                random.NextDouble(),
-                random.NextDouble()
+                random.NextDoubleInclusive(0.5, 2),
+                random.NextDoubleInclusive(0.5, 2),
+                random.NextDoubleInclusive(0.5, 2),
+                random.NextDoubleInclusive(0.5, 2),
+                random.NextDoubleInclusive(0.5, 2)
             };
 
             var originalFakeLengths = (double[])fakeLengths.Clone();
@@ -33,9 +33,9 @@ namespace SlimeVRAutoBone
             Console.WriteLine($"Fake lengths: {string.Join(", ", fakeLengths)}");
             Console.WriteLine();
 
-            var rate = 0.01;
+            var rate = 0.2;
 
-            for (var i = 0; i < 1000; i++)
+            for (var i = 0; i < 10000; i++)
             {
                 var rotations1 = new Vector3[] {
                     RandomRotation(random),
@@ -69,13 +69,13 @@ namespace SlimeVRAutoBone
                     var fakeLengthsCopy = (double[])fakeLengths.Clone();
                     fakeLengthsCopy[j] = fakeLengths[j] + adjust;
 
-                    var dist2 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
+                    var dist2 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengthsCopy);
 
                     if (dist2 > dist)
                     {
                         fakeLengthsCopy[j] = fakeLengths[j] - adjust;
 
-                        var dist3 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
+                        var dist3 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengthsCopy);
 
                         if (dist3 > dist)
                         {
@@ -99,6 +99,7 @@ namespace SlimeVRAutoBone
 
             Console.WriteLine();
             Console.WriteLine($"Lengths: {string.Join(", ", lengths)}");
+            Console.WriteLine($"Fake lengths: {string.Join(", ", originalFakeLengths)}");
             Console.WriteLine($"Estimated lengths: {string.Join(", ", fakeLengths)}");
 
             var origAccuracy = CalcAccuracy(lengths, originalFakeLengths);
@@ -157,7 +158,7 @@ namespace SlimeVRAutoBone
                 accuracy += Math.Abs((actual[i] - estimate[i]) / actual[i]);
             }
 
-            return accuracy;
+            return Math.Max(0, 1d - accuracy);
         }
     }
 }
