@@ -35,7 +35,7 @@ namespace SlimeVRAutoBone
 
             var rate = 0.2;
 
-            for (var i = 0; i < 10000; i++)
+            for (var i = 0; i < 500; i++)
             {
                 var rotations1 = new Vector3[] {
                     RandomRotation(random),
@@ -58,42 +58,45 @@ namespace SlimeVRAutoBone
                 var origin1 = GetOriginPos(footPos, rotations1, lengths);
                 var origin2 = GetOriginPos(footPos, rotations2, lengths);
 
-                var dist = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
-                var error = (dist * dist);
-                var adjust = error * rate;
-
-                Console.WriteLine($"Test {i + 1} estimated position offset: {dist}");
-
-                for (var j = 0; j < fakeLengths.Length; j++)
+                for (var k = 0; k < 100; k++)
                 {
-                    var fakeLengthsCopy = (double[])fakeLengths.Clone();
-                    fakeLengthsCopy[j] = fakeLengths[j] + adjust;
+                    var dist = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
+                    var error = (dist * dist);
+                    var adjust = error * rate;
 
-                    var dist2 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengthsCopy);
+                    Console.WriteLine($"Test {i + 1} estimated position offset: {dist}");
 
-                    if (dist2 > dist)
+                    for (var j = 0; j < fakeLengths.Length; j++)
                     {
-                        fakeLengthsCopy[j] = fakeLengths[j] - adjust;
+                        var fakeLengthsCopy = (double[])fakeLengths.Clone();
+                        fakeLengthsCopy[j] = fakeLengths[j] + adjust;
 
-                        var dist3 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengthsCopy);
+                        var dist2 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengthsCopy);
 
-                        if (dist3 > dist)
+                        if (dist2 > dist)
                         {
-                            continue;
+                            fakeLengthsCopy[j] = fakeLengths[j] - adjust;
+
+                            var dist3 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengthsCopy);
+
+                            if (dist3 > dist)
+                            {
+                                continue;
+                            }
+                            else
+                            {
+                                fakeLengths[j] -= adjust;
+                            }
                         }
                         else
                         {
-                            fakeLengths[j] -= adjust;
+                            fakeLengths[j] += adjust;
                         }
-                    }
-                    else
-                    {
-                        fakeLengths[j] += adjust;
-                    }
 
-                    dist = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
-                    error = (dist * dist);
-                    adjust = error * rate;
+                        dist = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
+                        error = (dist * dist);
+                        adjust = error * rate;
+                    }
                 }
             }
 
