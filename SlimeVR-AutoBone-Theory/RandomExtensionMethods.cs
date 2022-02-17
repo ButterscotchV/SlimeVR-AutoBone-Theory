@@ -27,5 +27,13 @@ namespace SlimeVR.AutoBone.Theory
         {
             return random.NextDoubleInclusive() * (max - min) + min;
         }
+
+        /// <summary>
+        /// Generates a random rotation vector
+        /// </summary>
+        public static Vector3 NextVectorRotation(this Random random)
+        {
+            return new Vector3(random.NextDoubleInclusive(-1, 1), random.NextDoubleInclusive(-1, -0.25), random.NextDoubleInclusive(-1, 1)).Normalize();
+        }
     }
 }

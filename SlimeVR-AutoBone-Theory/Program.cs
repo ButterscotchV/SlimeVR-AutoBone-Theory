@@ -6,28 +6,25 @@ namespace SlimeVR.AutoBone.Theory
     {
         static void Main(string[] args)
         {
+            const int numSegments = 5;
             var random = new Random();
 
             var footPos = Vector3.Randomized;
 
-            var lengths = new double[] {
-                random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2)
-            };
+            var lengths = new double[numSegments];
+            for (int i = 0; i < lengths.Length; i++)
+            {
+                lengths[i] = random.NextDoubleInclusive(0.5, 2);
+            }
 
             Console.WriteLine($"Lengths: {string.Join(", ", lengths)}");
 
-            var fakeLengths = new double[] {
-                random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2)
-            };
-
+            var fakeLengths = new double[numSegments];
+            for (int i = 0; i < fakeLengths.Length; i++)
+            {
+                fakeLengths[i] = random.NextDoubleInclusive(0.5, 2);
+            }
+            
             var originalFakeLengths = (double[])fakeLengths.Clone();
 
             Console.WriteLine($"Fake lengths: {string.Join(", ", fakeLengths)}");
@@ -37,21 +34,17 @@ namespace SlimeVR.AutoBone.Theory
 
             for (var i = 0; i < 500; i++)
             {
-                var rotations1 = new Vector3[] {
-                    RandomRotation(random),
-                    RandomRotation(random),
-                    RandomRotation(random),
-                    RandomRotation(random),
-                    RandomRotation(random)
-                };
+                var rotations1 = new Vector3[numSegments];
+                for (int j = 0; j < rotations1.Length; j++)
+                {
+                    rotations1[j] = random.NextVectorRotation();
+                }
 
-                var rotations2 = new Vector3[] {
-                    RandomRotation(random),
-                    RandomRotation(random),
-                    RandomRotation(random),
-                    RandomRotation(random),
-                    RandomRotation(random)
-                };
+                var rotations2 = new Vector3[numSegments];
+                for (int j = 0; j < rotations2.Length; j++)
+                {
+                    rotations2[j] = random.NextVectorRotation();
+                }
 
                 //Console.WriteLine($"Test {i + 1} rotations: {string.Join<Vector3>(", ", rotations)}");
 
@@ -109,11 +102,6 @@ namespace SlimeVR.AutoBone.Theory
             var finalAccuracy = CalcAccuracy(lengths, fakeLengths);
 
             Console.WriteLine($"Start accuracy: {origAccuracy * 100d} Final accuracy: {finalAccuracy * 100d}");
-        }
-
-        public static Vector3 RandomRotation(Random random)
-        {
-            return new Vector3(random.NextDoubleInclusive(-1, 1), random.NextDoubleInclusive(-1, -0.25), random.NextDoubleInclusive(-1, 1)).Normalize();
         }
 
         public static Vector3 GetOriginPos(Vector3 footPos, Vector3[] rotations, double[] lengths)
