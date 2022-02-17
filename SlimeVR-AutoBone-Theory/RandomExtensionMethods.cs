@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SlimeVRAutoBone
+namespace SlimeVR.AutoBone.Theory
 {
     public static class RandomExtensionMethods
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SlimeVRAutoBone
+namespace SlimeVR.AutoBone.Theory
 {
     public class Vector3 : ICloneable
     {
@@ -8,12 +8,14 @@ namespace SlimeVRAutoBone
         public double Y = 0;
         public double Z = 0;
 
-        public double SqrMagnitude => (X * X) + (Y * Y) + (Z * Z);
+        public double SqrMagnitude => X * X + Y * Y + Z * Z;
         public double Magnitude => Math.Sqrt(SqrMagnitude);
         public Vector3 Normalized => this / Magnitude;
 
-        public static Vector3 Randomized {
-            get {
+        public static Vector3 Randomized
+        {
+            get
+            {
                 var random = new Random();
                 return new Vector3(random.NextDoubleInclusive(-1, 1), random.NextDoubleInclusive(-1, 1), random.NextDoubleInclusive(-1, 1));
             }
@@ -36,7 +38,7 @@ namespace SlimeVRAutoBone
             var y = other.Y - Y;
             var z = other.Z - Z;
 
-            return Math.Sqrt((x * x) + (y * y) + (z * z));
+            return Math.Sqrt(x * x + y * y + z * z);
         }
 
         public Vector3 Normalize()

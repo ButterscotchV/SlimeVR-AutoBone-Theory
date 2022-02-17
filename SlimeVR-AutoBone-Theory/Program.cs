@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace SlimeVRAutoBone
+namespace SlimeVR.AutoBone.Theory
 {
     class Program
     {
@@ -14,7 +14,7 @@ namespace SlimeVRAutoBone
                 random.NextDoubleInclusive(0.5, 2),
                 random.NextDoubleInclusive(0.5, 2),
                 random.NextDoubleInclusive(0.5, 2),
-                random.NextDoubleInclusive(0.5, 2), 
+                random.NextDoubleInclusive(0.5, 2),
                 random.NextDoubleInclusive(0.5, 2)
             };
 
@@ -61,7 +61,7 @@ namespace SlimeVRAutoBone
                 for (var k = 0; k < 100; k++)
                 {
                     var dist = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
-                    var error = (dist * dist);
+                    var error = dist * dist;
                     var adjust = error * rate;
 
                     Console.WriteLine($"Test {i + 1} estimated position offset: {dist}");
@@ -94,7 +94,7 @@ namespace SlimeVRAutoBone
                         }
 
                         dist = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
-                        error = (dist * dist);
+                        error = dist * dist;
                         adjust = error * rate;
                     }
                 }
