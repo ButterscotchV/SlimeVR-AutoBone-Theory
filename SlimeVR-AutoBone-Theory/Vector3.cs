@@ -17,7 +17,7 @@ namespace SlimeVR.AutoBone.Theory
             get
             {
                 var random = new Random();
-                return new Vector3(random.NextDoubleInclusive(-1, 1), random.NextDoubleInclusive(-1, 1), random.NextDoubleInclusive(-1, 1));
+                return new Vector3(random);
             }
         }
 
@@ -32,6 +32,10 @@ namespace SlimeVR.AutoBone.Theory
             Z = z;
         }
 
+        public Vector3(Random random) : this(random.NextDoubleInclusive(-1, 1), random.NextDoubleInclusive(-1, 1), random.NextDoubleInclusive(-1, 1))
+        {
+        }
+
         public double Dist(Vector3 other)
         {
             var x = other.X - X;
@@ -39,6 +43,15 @@ namespace SlimeVR.AutoBone.Theory
             var z = other.Z - Z;
 
             return Math.Sqrt(x * x + y * y + z * z);
+        }
+
+        public double Dot(Vector3 other)
+        {
+            var x = other.X * X;
+            var y = other.Y * Y;
+            var z = other.Z * Z;
+
+            return x + y + z;
         }
 
         public Vector3 Normalize()
