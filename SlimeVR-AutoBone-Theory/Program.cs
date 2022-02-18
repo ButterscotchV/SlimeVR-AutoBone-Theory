@@ -240,7 +240,7 @@ namespace SlimeVR.AutoBone.Theory
 
         public static double CalcErrorDeriv(double rootDist, double endDist)
         {
-            return rootDist > 0 ? endDist / rootDist : 0;
+            return rootDist > 0 ? (endDist / 2d) / rootDist : 0;
         }
 
         public static double CalcError(double errorDeriv)
