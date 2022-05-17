@@ -31,13 +31,13 @@ namespace SlimeVR.AutoBone.Theory
             tasks.Add(Task.Run(() =>
             {
                 var random = new Random(seed);
-                RunTestSet((i) => RunTest(random.Next(), initRate: 5d, useContribution: true, randomlyOffset: false), "Using contribution");
+                RunTestSet((i) => RunTest(random.Next(), initRate: 3d, useContribution: true, randomlyOffset: false), "Using contribution");
             }));
 
             tasks.Add(Task.Run(() =>
             {
                 var random = new Random(seed);
-                RunTestSet((i) => RunTest(random.Next(), initRate: 1d, useContribution: true, randomlyOffset: true), "Using contribution [offset]");
+                RunTestSet((i) => RunTest(random.Next(), initRate: 0.5d, useContribution: true, randomlyOffset: true), "Using contribution [offset]");
             }));
 
             Task.WaitAll(tasks.ToArray());
@@ -229,15 +229,9 @@ namespace SlimeVR.AutoBone.Theory
                 var fakeLengthsCopy = (double[])fakeLengths.Clone();
                 for (var j = 0; j < fakeLengthsCopy.Length; j++)
                 {
-                    double adjust2;
-                    if (useContribution)
-                    {
-                        adjust2 = (adjust * CalcRotationContribution(estimatedPosOffset, rotations1[j], rotations2[j], fakeLengthsCopy[j])) / lengthSum;
-                    }
-                    else
-                    {
-                        adjust2 = (adjust * fakeLengthsCopy[j]) / lengthSum;
-                    }
+                    double adjust2 = useContribution
+                        ? (adjust * -CalcRotationContribution(estimatedPosOffset, rotations1[j], rotations2[j], fakeLengthsCopy[j])) / lengthSum
+                        : (adjust * fakeLengthsCopy[j]) / lengthSum;
 
                     //Console.WriteLine($"Test {i} adjust2: {adjust2}");
                     //Console.WriteLine($"Test {i} rotation contrib: {CalcRotationContribution(estimatedPosOffset, rotations1[j], rotations2[j], fakeLengthsCopy[j])}");
@@ -250,6 +244,9 @@ namespace SlimeVR.AutoBone.Theory
 
                     if (errorDeriv2 > errorDeriv)
                     {
+                        // Adjust based on CalcRotationContribution sign rather than guessing
+                        if (useContribution) continue;
+
                         fakeLengthsCopy2[j] = fakeLengthsCopy[j] - adjust2;
 
                         var dist3 = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengthsCopy2);
@@ -351,10 +348,10 @@ namespace SlimeVR.AutoBone.Theory
         {
             Vector3 normalizedOffset = offset.Normalized;
 
-            var dot1 = Math.Abs(normalizedOffset.Dot(rotation1));
-            var dot2 = Math.Abs(normalizedOffset.Dot(rotation2));
+            var dot1 = normalizedOffset.Dot(rotation1);
+            var dot2 = normalizedOffset.Dot(rotation2);
 
-            return length * Math.Abs(dot2 - dot1);
+            return length * (dot2 - dot1);
         }
     }
 }
