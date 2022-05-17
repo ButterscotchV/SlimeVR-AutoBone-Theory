@@ -3,11 +3,22 @@ using System.Linq;
 
 namespace SlimeVR.AutoBone.Theory
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
-            var numTests = 20;
+            RunTestSet((i) => {
+                return RunTest(3d, false);
+            }, "Not using contribution");
+
+            RunTestSet((i) => {
+                return RunTest(6.5d, true);
+            }, "Using contribution");
+        }
+
+        public static void RunTestSet(Func<int, TestReport> testFunction, string? testName = null)
+        {
+            var numTests = 100;
 
             var iters = 0;
             var accuracy = 0d;
@@ -15,7 +26,7 @@ namespace SlimeVR.AutoBone.Theory
 
             for (var i = 0; i < numTests; i++)
             {
-                var report = RunTest(95d);
+                var report = testFunction(i);
                 iters += report.Iters;
                 accuracy += report.Accuracy;
                 improvement += report.Improvement;
@@ -25,13 +36,13 @@ namespace SlimeVR.AutoBone.Theory
             accuracy /= numTests;
             improvement /= numTests;
 
-            Console.WriteLine("===== RESULTS =====");
+            Console.WriteLine(testName != null ? $"===== RESULTS ({testName}) =====" : "===== RESULTS =====");
             Console.WriteLine($"Avg iters: {iters}");
             Console.WriteLine($"Avg accuracy: {accuracy:0.0000}%");
             Console.WriteLine($"Avg improvement: {improvement:0.0000}%");
         }
 
-        struct TestReport
+        public struct TestReport
         {
             public int Iters;
 
@@ -41,12 +52,12 @@ namespace SlimeVR.AutoBone.Theory
             public double Improvement => Accuracy - OrigAccuracy;
         }
 
-        static TestReport RunTest(double initRate = 200d)
+        public static TestReport RunTest(double initRate = 200d, bool useContribution = true, bool randomlyOffset = true)
         {
             var targetError = 0d;
             var targetAccuracy = 99.9999d;
 
-            var numSegments = 4;
+            var numSegments = 16;
             var random = new Random();
 
             var footPos = new Vector3(random) * 5d;
@@ -76,7 +87,7 @@ namespace SlimeVR.AutoBone.Theory
             {
                 if (i > 0)
                 {
-                    rate *= 0.998d;
+                    rate *= 0.9998d;
                 }
                 
                 i++;
@@ -103,13 +114,18 @@ namespace SlimeVR.AutoBone.Theory
 
                 var origin1 = GetOriginPos(footPos, rotations1, lengths);
                 var origin2 = GetOriginPos(footPos, rotations2, lengths);
+                //var originOffset = origin2 - origin1;
                 var originDist = origin1.Dist(origin2);
 
                 //Console.WriteLine($"Test {i} origin dist: {originDist}");
 
-                var dist = CalcDist(origin1, origin2, rotations1, rotations2, fakeLengths);
+                var estimatedPos1 = GetEndPos(origin1, rotations1, fakeLengths);
+                var estimatedPos2 = GetEndPos(origin2, rotations2, fakeLengths);
+                var estimatedPosOffset = estimatedPos2 - estimatedPos1;
+
+                var dist = estimatedPos2.Dist(estimatedPos1);
                 var errorDeriv = CalcErrorDeriv(originDist, dist);
-                var error = CalcError(errorDeriv);
+                //var error = CalcError(errorDeriv);
 
                 var adjust = errorDeriv * rate;
 
@@ -141,8 +157,18 @@ namespace SlimeVR.AutoBone.Theory
                 var fakeLengthsCopy = (double[])fakeLengths.Clone();
                 for (var j = 0; j < fakeLengthsCopy.Length; j++)
                 {
-                    var adjust2 = (adjust * fakeLengthsCopy[j]) / lengthSum;
+                    double adjust2;
+                    if (useContribution)
+                    {
+                        adjust2 = (adjust * CalcRotationContribution(estimatedPosOffset, rotations1[j], rotations2[j], fakeLengthsCopy[j])) / lengthSum;
+                    }
+                    else
+                    {
+                        adjust2 = (adjust * fakeLengthsCopy[j]) / lengthSum;
+                    }
+
                     //Console.WriteLine($"Test {i} adjust2: {adjust2}");
+                    //Console.WriteLine($"Test {i} rotation contrib: {CalcRotationContribution(estimatedPosOffset, rotations1[j], rotations2[j], fakeLengthsCopy[j])}");
 
                     var fakeLengthsCopy2 = (double[])fakeLengthsCopy.Clone();
                     fakeLengthsCopy2[j] = fakeLengthsCopy[j] + adjust2;
@@ -181,7 +207,7 @@ namespace SlimeVR.AutoBone.Theory
             var origAccuracy = CalcAccuracy(lengths, originalFakeLengths) * 100d;
             var finalAccuracy = CalcAccuracy(lengths, fakeLengths) * 100d;
 
-            Console.WriteLine($"Start accuracy: {origAccuracy:0.0000}% Final accuracy: {finalAccuracy:0.0000}%");
+            //Console.WriteLine($"Start accuracy: {origAccuracy:0.0000}% Final accuracy: {finalAccuracy:0.0000}%");
             return new TestReport()
             {
                 Iters = i,
@@ -240,12 +266,23 @@ namespace SlimeVR.AutoBone.Theory
 
         public static double CalcErrorDeriv(double rootDist, double endDist)
         {
-            return rootDist > 0 ? (endDist / 2d) / rootDist : 0;
+            //return rootDist > 0 ? (endDist / 2d) / rootDist : 0;
+            return endDist / 2d;
         }
 
         public static double CalcError(double errorDeriv)
         {
             return 0.5d * (errorDeriv * errorDeriv);
+        }
+
+        public static double CalcRotationContribution(Vector3 offset, Vector3 rotation1, Vector3 rotation2, double length)
+        {
+            Vector3 normalizedOffset = offset.Normalized;
+
+            var dot1 = Math.Abs(normalizedOffset.Dot(rotation1));
+            var dot2 = Math.Abs(normalizedOffset.Dot(rotation2));
+
+            return length * Math.Abs(dot2 - dot1);
         }
     }
 }
