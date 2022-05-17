@@ -19,17 +19,25 @@ namespace SlimeVR.AutoBone.Theory
             tasks.Add(Task.Run(() =>
             {
                 var random = new Random(seed);
-                RunTestSet((i) => {
-                    return RunTest(random.Next(), initRate: 3d, useContribution: false, randomlyOffset: false);
-                }, "Not using contribution");
+                RunTestSet((i) => RunTest(random.Next(), initRate: 3d, useContribution: false, randomlyOffset: false), "Not using contribution");
             }));
 
             tasks.Add(Task.Run(() =>
             {
                 var random = new Random(seed);
-                RunTestSet((i) => {
-                    return RunTest(random.Next(), initRate: 6.5d, useContribution: true, randomlyOffset: false);
-                }, "Using contribution");
+                RunTestSet((i) => RunTest(random.Next(), initRate: 0.5d, useContribution: false, randomlyOffset: true), "Not using contribution [offset]");
+            }));
+
+            tasks.Add(Task.Run(() =>
+            {
+                var random = new Random(seed);
+                RunTestSet((i) => RunTest(random.Next(), initRate: 5d, useContribution: true, randomlyOffset: false), "Using contribution");
+            }));
+
+            tasks.Add(Task.Run(() =>
+            {
+                var random = new Random(seed);
+                RunTestSet((i) => RunTest(random.Next(), initRate: 1d, useContribution: true, randomlyOffset: true), "Using contribution [offset]");
             }));
 
             Task.WaitAll(tasks.ToArray());
@@ -37,7 +45,7 @@ namespace SlimeVR.AutoBone.Theory
 
         public static void RunTestSet(Func<int, TestReport> testFunction, string? testName = null)
         {
-            var numTests = 100;
+            var numTests = 200;
 
             var iters = 0;
             var accuracy = 0d;
@@ -95,11 +103,13 @@ namespace SlimeVR.AutoBone.Theory
             public double Improvement => Accuracy - OrigAccuracy;
         }
 
-        public static TestReport RunTest(int seed, double initRate = 200d, bool useContribution = true, bool randomlyOffset = true)
+        public static TestReport RunTest(int seed, double initRate = 200d, bool useContribution = true, bool randomlyOffset = false)
         {
             var targetError = 0d;
             var targetAccuracy = 99.9999d;
+            var maxIters = 2000;
 
+            var maxRotationOffset = 45d / 360d;
             var numSegments = 16;
             var random = new Random(seed);
 
@@ -135,41 +145,53 @@ namespace SlimeVR.AutoBone.Theory
                 
                 i++;
 
-                if (rate <= 0.0000001d)
+                if (i >= maxIters)
+                {
+                    break;
+                }
+                else if (rate <= 0.0000001d)
                 {
                     Console.WriteLine("Rate is too low... Giving up.");
                     break;
                 }
 
                 var rotations1 = new Vector3[numSegments];
+                var rotations1Off = new Vector3[numSegments];
                 for (var j = 0; j < rotations1.Length; j++)
                 {
-                    rotations1[j] = random.NextVectorRotation();
+                    var rot = random.NextVectorRotation();
+                    rotations1[j] = rot;
+                    if (randomlyOffset) rotations1Off[j] = (rot + (random.NextVectorRotation() * maxRotationOffset)).Normalize();
                 }
 
                 var rotations2 = new Vector3[numSegments];
+                var rotations2Off = new Vector3[numSegments];
                 for (var j = 0; j < rotations2.Length; j++)
                 {
-                    rotations2[j] = random.NextVectorRotation();
+                    var rot = random.NextVectorRotation();
+                    rotations2[j] = rot;
+                    if (randomlyOffset) rotations2Off[j] = (rot + (random.NextVectorRotation() * maxRotationOffset)).Normalize();
                 }
 
                 //Console.WriteLine($"Test {i} rotations1: {string.Join<Vector3>(", ", rotations1)}");
 
+                // Find an origin (HMD) position using the known foot position and going up the rotations with real lengths
                 var origin1 = GetOriginPos(footPos, rotations1, lengths);
                 var origin2 = GetOriginPos(footPos, rotations2, lengths);
                 //var originOffset = origin2 - origin1;
                 var originDist = origin1.Dist(origin2);
 
-                //Console.WriteLine($"Test {i} origin dist: {originDist}");
-
-                var estimatedPos1 = GetEndPos(origin1, rotations1, fakeLengths);
-                var estimatedPos2 = GetEndPos(origin2, rotations2, fakeLengths);
-
                 if (randomlyOffset)
                 {
-                    estimatedPos1 += new Vector3(random) * 0.01;
-                    estimatedPos2 += new Vector3(random) * 0.01;
+                    rotations1 = rotations1Off;
+                    rotations2 = rotations2Off;
                 }
+
+                //Console.WriteLine($"Test {i} origin dist: {originDist}");
+
+                // Estimate a foot position using the fake lengths
+                var estimatedPos1 = GetEndPos(origin1, rotations1, fakeLengths);
+                var estimatedPos2 = GetEndPos(origin2, rotations2, fakeLengths);
 
                 var estimatedPosOffset = estimatedPos2 - estimatedPos1;
 
