@@ -1,19 +1,38 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SlimeVR.AutoBone.Theory
 {
     public class Program
     {
+        private static readonly object ResultLock = new();
+
         public static void Main(string[] args)
         {
-            RunTestSet((i) => {
-                return RunTest(3d, false);
-            }, "Not using contribution");
+            int seed = Environment.TickCount;
 
-            RunTestSet((i) => {
-                return RunTest(6.5d, true);
-            }, "Using contribution");
+            var tasks = new List<Task>();
+
+            tasks.Add(Task.Run(() =>
+            {
+                var random = new Random(seed);
+                RunTestSet((i) => {
+                    return RunTest(random.Next(), initRate: 3d, useContribution: false, randomlyOffset: false);
+                }, "Not using contribution");
+            }));
+
+            tasks.Add(Task.Run(() =>
+            {
+                var random = new Random(seed);
+                RunTestSet((i) => {
+                    return RunTest(random.Next(), initRate: 6.5d, useContribution: true, randomlyOffset: false);
+                }, "Using contribution");
+            }));
+
+            Task.WaitAll(tasks.ToArray());
         }
 
         public static void RunTestSet(Func<int, TestReport> testFunction, string? testName = null)
@@ -24,22 +43,46 @@ namespace SlimeVR.AutoBone.Theory
             var accuracy = 0d;
             var improvement = 0d;
 
+            var tasks = new List<Task>(numTests);
+
             for (var i = 0; i < numTests; i++)
             {
-                var report = testFunction(i);
-                iters += report.Iters;
-                accuracy += report.Accuracy;
-                improvement += report.Improvement;
+                tasks.Add(Task.Run(() =>
+                {
+                    var report = testFunction(i);
+
+                    Interlocked.Add(ref iters, report.Iters);
+                    InterlockedAdd(ref accuracy, report.Accuracy);
+                    InterlockedAdd(ref improvement, report.Improvement);
+                }));
             }
+
+            Task.WaitAll(tasks.ToArray());
 
             iters /= numTests;
             accuracy /= numTests;
             improvement /= numTests;
 
-            Console.WriteLine(testName != null ? $"===== RESULTS ({testName}) =====" : "===== RESULTS =====");
-            Console.WriteLine($"Avg iters: {iters}");
-            Console.WriteLine($"Avg accuracy: {accuracy:0.0000}%");
-            Console.WriteLine($"Avg improvement: {improvement:0.0000}%");
+            lock (ResultLock)
+            {
+                Console.WriteLine(testName != null ? $"===== RESULTS ({testName}) =====" : "===== RESULTS =====");
+                Console.WriteLine($"Avg iters: {iters}");
+                Console.WriteLine($"Avg accuracy: {accuracy:0.0000}%");
+                Console.WriteLine($"Avg improvement: {improvement:0.0000}%");
+            }
+        }
+
+        public static double InterlockedAdd(ref double location, double value)
+        {
+            double newCurrentValue = location;
+            while (true)
+            {
+                double currentValue = newCurrentValue;
+                double newValue = currentValue + value;
+                newCurrentValue = Interlocked.CompareExchange(ref location, newValue, currentValue);
+                if (newCurrentValue == currentValue)
+                    return newValue;
+            }
         }
 
         public struct TestReport
@@ -52,13 +95,13 @@ namespace SlimeVR.AutoBone.Theory
             public double Improvement => Accuracy - OrigAccuracy;
         }
 
-        public static TestReport RunTest(double initRate = 200d, bool useContribution = true, bool randomlyOffset = true)
+        public static TestReport RunTest(int seed, double initRate = 200d, bool useContribution = true, bool randomlyOffset = true)
         {
             var targetError = 0d;
             var targetAccuracy = 99.9999d;
 
             var numSegments = 16;
-            var random = new Random();
+            var random = new Random(seed);
 
             var footPos = new Vector3(random) * 5d;
 
@@ -121,6 +164,13 @@ namespace SlimeVR.AutoBone.Theory
 
                 var estimatedPos1 = GetEndPos(origin1, rotations1, fakeLengths);
                 var estimatedPos2 = GetEndPos(origin2, rotations2, fakeLengths);
+
+                if (randomlyOffset)
+                {
+                    estimatedPos1 += new Vector3(random) * 0.01;
+                    estimatedPos2 += new Vector3(random) * 0.01;
+                }
+
                 var estimatedPosOffset = estimatedPos2 - estimatedPos1;
 
                 var dist = estimatedPos2.Dist(estimatedPos1);
